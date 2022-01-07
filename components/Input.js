@@ -2,13 +2,27 @@ import React, { useRef, useState } from 'react';
 import { CalendarIcon, ChartBarIcon, EmojiHappyIcon, PhotographIcon, XIcon } from "@heroicons/react/outline"
 import 'emoji-mart/css/emoji-mart.css';
 import { Picker } from 'emoji-mart';
+import { addDoc, collection, doc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { getDownloadURL, ref, uploadString } from "firebase/storage";
+import { db, storage } from '../firebase';
 
 function Input() {
   const [input, setInput] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [showEmojis, setShowEmojis] = useState(false);
+  const [loading, setLoading] = useState(false);
   const filePickerRef = useRef(null);
-  const addImageToPost = () => {}
+
+  const addImageToPost = (e) => {
+    const reader = new FileReader();
+    if(e.target.files[0]){
+      reader.readAsDataURL(e.target.files[0])
+    }
+    reader.onload = (readerEvent) => {
+      setSelectedFile(readerEvent.target.result)
+    }
+  }
+
   const addEmoji = (e) => {
     let sym = e.unified.split("-");
     let codesArray = [];
@@ -16,9 +30,32 @@ function Input() {
     let emoji = String.fromCodePoint(...codesArray);
     setInput(input + emoji);
   }
-  console.log({selectedFile})
+
+  const sendPost = async() => {
+    if(loading) return;
+    setLoading(true);
+    const docRef = await addDoc(collection(db, 'tweets'), {
+      text: input,
+      timestamp: serverTimestamp()
+    })
+
+    if(selectedFile){
+      const imageRef = ref(storage, `tweets/${docRef.id}/image`);
+      await uploadString(imageRef, selectedFile, "data_url").then(async() => {
+        const downloadUrl = await getDownloadURL(imageRef);
+        await updateDoc(doc(db, "tweets", docRef.id), {
+          image: downloadUrl
+        });
+      });
+    }
+    setLoading(false);
+    setInput("");
+    setSelectedFile(null);
+    setShowEmojis(false);
+  }
+
   return (
-    <div className={`border-b border-gray-700 p-3 flex space-x-3 overflow-y-scroll`}>
+    <div className={`border-b border-gray-700 p-3 flex space-x-3 overflow-y-scroll ${loading && "opacity-60"}` }>
       <img 
         src="https://miro.medium.com/fit/c/32/32/2*40Q_CoHocbKNvroFbuttYQ.jpeg" alt="avatar"
         className="h-11 w-11 rounded-full cursor-pointer" 
@@ -44,36 +81,38 @@ function Input() {
             </div>
           )}
         </div>
-        <div className="flex items-center justify-between pt-2.5">
-          <div className="flex items-center">
-            <div className="icon" onClick={() => filePickerRef.current.click()}>
-              <PhotographIcon className="h-[22px] text-[#1d9bf0]" />
-              <input type="file" onChange={addImageToPost} ref={filePickerRef} hidden/>
+        {!loading && (
+          <div className="flex items-center justify-between pt-2.5">
+            <div className="flex items-center">
+              <div className="icon" onClick={() => filePickerRef.current.click()}>
+                <PhotographIcon className="h-[22px] text-[#1d9bf0]" />
+                <input type="file" onChange={addImageToPost} ref={filePickerRef} hidden/>
+              </div>
+              <div className="icon rotate-90">
+                <ChartBarIcon className="h-[22px] text-[#1d9bf0]" />
+              </div>
+              <div className="icon" onClick={() => setShowEmojis(!showEmojis)}>
+                <EmojiHappyIcon className="h-[22px] text-[#1d9bf0]" />
+              </div>
+              <div className="icon">
+                <CalendarIcon className="h-[22px] text-[#1d9bf0]" />
+              </div>
+              {showEmojis && (
+                <Picker 
+                  onSelect={addEmoji}
+                  style={{position: "absolute", marginTop: "465px", marginLeft: -40, maxWidth: "320px", borderRadius: "20px"}}
+                  theme="dark"
+                />
+              )}
             </div>
-            <div className="icon rotate-90">
-              <ChartBarIcon className="h-[22px] text-[#1d9bf0]" />
-            </div>
-            <div className="icon" onClick={() => setShowEmojis(!showEmojis)}>
-              <EmojiHappyIcon className="h-[22px] text-[#1d9bf0]" />
-            </div>
-            <div className="icon">
-              <CalendarIcon className="h-[22px] text-[#1d9bf0]" />
-            </div>
-            {showEmojis && (
-              <Picker 
-                onSelect={addEmoji}
-                style={{position: "absolute", marginTop: "465px", marginLeft: -40, maxWidth: "320px", borderRadius: "20px"}}
-                theme="dark"
-              />
-            )}
+            <button 
+              className="bg-[#1d9bf0] text-white rounded-full px-4 py-1.5 font-bold shadow-md hover:bg-[#1a8cd8] 
+              disabled:hover:bg-[#1d9bf0] disabled:opacity-50 disabled:cursor-default" 
+              disabled={!input.trim() && !selectedFile} 
+              onClick={sendPost}
+            >Tweet</button>
           </div>
-          <button 
-            className="bg-[#1d9bf0] text-white rounded-full px-4 py-1.5 font-bold shadow-md hover:bg-[#1a8cd8] 
-            disabled:hover:bg-[#1d9bf0] disabled:opacity-50 disabled:cursor-default" 
-            disabled={!input.trim() && !selectedFile} 
-            // onClick={sendPost}
-          >Tweet</button>
-        </div>
+        )}
       </div>
     </div>
   )
