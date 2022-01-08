@@ -5,8 +5,10 @@ import { Picker } from 'emoji-mart';
 import { addDoc, collection, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { getDownloadURL, ref, uploadString } from "firebase/storage";
 import { db, storage } from '../firebase';
+import { useSession, signOut } from 'next-auth/react';
 
 function Input() {
+  const {data: session} = useSession();
   const [input, setInput] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [showEmojis, setShowEmojis] = useState(false);
@@ -35,6 +37,10 @@ function Input() {
     if(loading) return;
     setLoading(true);
     const docRef = await addDoc(collection(db, 'tweets'), {
+      id: session.user.uid,
+      username: session.user.name,
+      userImage: session.user.image,
+      tag: session.user.tag,
       text: input,
       timestamp: serverTimestamp()
     })
@@ -57,7 +63,7 @@ function Input() {
   return (
     <div className={`border-b border-gray-700 p-3 flex space-x-3 overflow-y-scroll ${loading && "opacity-60"}` }>
       <img 
-        src="https://miro.medium.com/fit/c/32/32/2*40Q_CoHocbKNvroFbuttYQ.jpeg" alt="avatar"
+        src={session.user.image} alt="avatar"
         className="h-11 w-11 rounded-full cursor-pointer" 
       />
       <div className="w-full divide-y divide-gray-700">

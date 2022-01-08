@@ -5,8 +5,10 @@ import { HomeIcon } from "@heroicons/react/solid"
 import {
   BellIcon, HashtagIcon, InboxIcon, BookmarkIcon, ClipboardListIcon, UserIcon, DotsCircleHorizontalIcon, DotsHorizontalIcon
 } from "@heroicons/react/outline"
+import { useSession, signOut } from 'next-auth/react';
 
 function Sidebar() {
+  const {data: session} = useSession();
   return (
     <div className="hidden sm:flex flex-col items-center xl:items-start xl:w-[340px] p-2 fixed h-full">
       <div className="flex items-center justify-center w-14 h-14 hoverAnimation p-0 xl:ml-24">
@@ -25,14 +27,14 @@ function Sidebar() {
       <button className="hidden xl:inline ml-auto bg-[#1d9bf0] text-white rounded-full w-56 h-[52px] text-lg font-bold shadow-md hover:bg-[#1a8cd8 ]">
         Tweet
       </button>
-      <div className="text-[#d9d9d9] flex items-center justify-center hoverAnimation xl:ml-auto xl:-mr-5 mt-auto">
+      <div className="text-[#d9d9d9] flex items-center justify-center hoverAnimation xl:ml-auto xl:-mr-5 mt-auto" onClick={signOut}>
         <img 
-          src="https://miro.medium.com/fit/c/32/32/2*40Q_CoHocbKNvroFbuttYQ.jpeg" alt="avatar"
+          src={session.user.image} alt="avatar"
           className="h-10 w-10 rounded-full xl:mr-2.5" 
         />
         <div className="hidden xl:inline leading-5">
-          <h4 className="font-bold">Daddy Jay</h4>
-          <p className="text-[#6e7679]">@horlabyc</p>
+          <h4 className="font-bold">{session.user.name}</h4>
+          <p className="text-[#6e7679]">@{session.user.tag}</p>
         </div>
         <DotsHorizontalIcon className="hidden h-5 xl:inline ml-10"/>
       </div>
